@@ -3,8 +3,8 @@
 %%
 
 \s+                   	/* skip whitespace */
-[0-9]+("."[0-9]+)?    	return 'Number'
-\"\w+\"			  	  	return 'String'
+"-"?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?				return 'Number'
+\"(((?=\\)\\(["\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^"\\]+)*\"		return 'String'
 "true"					return 'True'
 "false"					return 'False'
 "null"					return 'Null'
@@ -108,6 +108,6 @@ string:
 
 number:
 	Number {
-		$$ = parseInt($1)
+		$$ = parseFloat($1)
 	}	
 	;
