@@ -1,0 +1,13 @@
+{
+	"name": "join",
+	"male": false,
+	"birth": 19950211,
+	"following": [{
+		"name": "p1",
+		"male": true
+	}, {
+		"name": "p2",
+		"male": false
+	}],
+	"homepage": null
+}
