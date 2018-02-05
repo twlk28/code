@@ -1,4 +1,4 @@
-from lzw import *
+import os
 
 if __name__ == '__main__':
     cmd1 = 'python3 lzw.py a.bmp'
