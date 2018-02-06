@@ -2,25 +2,31 @@ from utils import *
 
 
 class DecodingTable(object):
-    kValueIncreasment = -1
+    maxAddress = 2 ** 16
+    initIndex = 2 ** 8
 
     def __init__(self):
         self.table = {}
-        self._total = 256
+        self._i = DecodingTable.initIndex
 
-    def set(self, key, value=kValueIncreasment):
-        if value == DecodingTable.kValueIncreasment:
-            self.table[key] = self._total
-            self._total += 1
-        else:
-            self.table[key] = value
-            self._total += 1
+    def set(self, key, value):
+        self.table[key] = value
+        self._i += 1
+        if self.isfull():
+            self.reset()
 
     def get(self, item):
         if item < 256:
             return chr(item)
         else:
             return self.table.get(item)
+
+    def reset(self):
+        self.table = {}
+        self._i = DecodingTable.initIndex
+
+    def isfull(self):
+        return self._i == DecodingTable.maxAddress
 
 
 class DecodingInput(object):
@@ -66,7 +72,7 @@ def _decode(coding):
             append_result(result, curr)
             prev = table.get(prev_code)
             curr = table.get(curr_code)[0]
-            table.set(table._total, prev + curr)
+            table.set(table._i, prev + curr)
             pass
         else:
             prev = table.get(prev_code)

@@ -2,19 +2,29 @@ from utils import *
 
 
 class EncodingTable(object):
+    maxAddress = 2 ** 16
+    initIndex = 2 ** 8
+
     def __init__(self):
         self.table = {}
-        self._total = 256
+        self._i = EncodingTable.initIndex
 
     def add(self, key):
-        self.table[key] = self._total
-        self._total += 1
+        self.table[key] = self._i
+        self._i += 1
 
     def get(self, key):
         if len(key) == 1:
             return key[0]
         else:
             return self.table.get(key)
+
+    def reset(self):
+        self.table = {}
+        self._i = EncodingTable.initIndex
+
+    def isfull(self):
+        return self._i == EncodingTable.maxAddress
 
 
 class EncodingOutput(object):
@@ -24,10 +34,6 @@ class EncodingOutput(object):
 
     # number → 2bytes data
     def append(self, coding_number):
-        # if coding_number > 0xffff:
-        # log(coding_number)
-        # pass
-
         if coding_number < 256:
             self.data.append(0x00)
             self.data.append(coding_number)
@@ -50,9 +56,10 @@ def _encode(src):
         curr = bytes([src[i]])
         record = prev + curr
         if table.get(record) is None:
-            prev_coding = table.get(prev)
-            output.append(prev_coding)
             table.add(record)
+            output.append(table.get(prev))
+            if table.isfull():
+                table.reset()
             prev = curr
         else:
             prev += curr
