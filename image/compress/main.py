@@ -43,7 +43,7 @@ def filter_image(data, ratio=1):
 
     # 造一个空数组并复制数据
     matrix = np.zeros_like(data)
-    w2 = 512 / 2
+    w2 = len(data) / 2
     r = w2 * (1 - ratio)
     for i, row in enumerate(data):
         for j, n in enumerate(row):
@@ -63,7 +63,7 @@ def preview(data):
         # 从 1 到 9 选择画在第 n 个子图
         plot.subplot(m, n, i + 1)
         # 这里可以设置不同的过滤等级（压缩等级）
-        ratio = (i + 1) / 10
+        ratio = (i + 1) / 9
         img = filter_image(data, ratio)
         b = decompress_image(img)
         plot_data = np.uint8(b)
