@@ -8,8 +8,10 @@ class DaMesh extends DaObject {
         this.scale = DaVector.new(1, 1, 1)
         this.vertices = null
         this.indices = null
+        this.texture = null
     }
-    static fromDa3d(da3dString){
+    static fromDa3d(da3dString, textureString){
+        let texture = DaImage.fromString(textureString)
         let s = da3dString.split('\n')
         let numberOfVertices = parseInt(s[2].split(' ')[1])
         let numberOfIndices = parseInt(s[3].split(' ')[1])
@@ -18,10 +20,10 @@ class DaMesh extends DaObject {
         let vertices = []
         for (let i = 0; i < numberOfVertices; i++) {
             let line = s[begin+i].split(' ')
-            let [x, y, z] = [line[0], line[1], line[2]]
-            let v = DaVector.new(x, y, z)
-            let c = DaColor.green()
-            vertices[i] = DaVertex.new(v, c)
+            let [x, y, z, u, v] = [line[0], line[1], line[2], +line[6], +line[7]]
+            let vector = DaVector.new(x, y, z)
+            let color = DaColor.red()
+            vertices[i] = DaVertex.new(vector, u, v, color)
         }
 
         begin += numberOfVertices
@@ -34,6 +36,7 @@ class DaMesh extends DaObject {
         let m = this.new()
         m.vertices = vertices
         m.indices = indices
+        m.texture = texture
         return m
     }
     // 返回一个正方体
@@ -53,9 +56,8 @@ class DaMesh extends DaObject {
         let vertices = []
         for (let i = 0; i < points.length; i += 3) {
             let v = DaVector.new(points[i], points[i+1], points[i+2])
-            // let c = DaColor.randomColor()
-            let c = DaColor.red()
-            vertices.push(DaVertex.new(v, c))
+            let c = DaColor.randomColor()
+            vertices.push(DaVertex.new(v, 0, 0, c))
         }
 
         // 12 triangles * 3 vertices each = 36 vertex indices
@@ -78,5 +80,55 @@ class DaMesh extends DaObject {
         m.vertices = vertices
         m.indices = indices
         return m
+    }
+}
+
+class DaImage extends DaObject {
+    constructor(dict){
+        super()
+        if (dict){
+            this.width = dict.width
+            this.height = dict.height
+            this._pixels = dict.pixels
+        }
+        else {
+            this.width = 0
+            this.height = 0
+            this._pixels = []
+        }
+    }
+    static fromString(daImageString){
+        let s = daImageString.split('\n')
+        let width = parseInt(s[2])
+        let height = parseInt(s[3])
+        let pixels = []
+        let begin = 4 // 第5行开始是像素值
+        for (let i = 0; i < height; i++) {
+            let line = s[begin+i] || ''
+            let linePixels = line.split(' ')
+            for (let j = 0; j < width; j++) {
+                let pixel = parseInt(linePixels[j]) || 0
+                let [r, g, b, a] = rgbaFromPixel(pixel)
+                let color = DaColor.new(r, g, b, a)
+                pixels.push(color)
+            }
+        }
+        let image = DaImage.new({width, height, pixels})
+        return image
+    }
+    colorFromUV(u, v){
+        // u v 是 0-1的小数, 乘上宽高表示第几个像素
+        let int = Math.round
+        let x = int(u * this.width)
+        let y = int(v * this.height)
+        let i = y * this.width + x
+        let color = this._pixels[i]
+        return color
+    }
+    colorFromXY(x, y){
+        let int = Math.round
+        let i = int(y) * this.width + int(x)
+        let color = this._pixels[i] || DaColor.red()
+        return color
     }
 }

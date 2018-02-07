@@ -39,28 +39,21 @@ class DaCanvas extends DaObject {
         let int = Math.floor
         x = int(x)
         y = int(y)
-        // 用座标算像素下标
         let i = (y * this.w + x) * this.bytesPerPixel
-        // 设置像素
         let p = this.pixels.data
         return DaColor.new(p[i], p[i+1], p[i+2], p[i+3])
     }
     _setPixel(x, y, z, color) {
-        // 设置像素点
-        // 浮点转 int
         let int = Math.round
         x = int(x)
         y = int(y)
-        // 用座标算像素下标
         let i = (y * this.w + x) * this.bytesPerPixel
-        // 设置像素
         let p = this.pixels.data
         let {r, g, b, a} = color
         if (this.zbuffer[i] && this.zbuffer[i] < z){
             return
         }
         this.zbuffer[i] = z
-        // 一个像素 4 字节, 分别表示 r g b a
         p[i] = int(r)
         p[i+1] = int(g)
         p[i+2] = int(b)
@@ -115,7 +108,7 @@ class DaCanvas extends DaObject {
             }
         }
     }
-    drawScanline(v1, v2) {
+    drawScanline(v1, v2, texture) {
         let [a, b] = [v1, v2].sort((va, vb) => va.position.x - vb.position.x)
         let [x1, x2, y, z1, z2] = [a.position.x, b.position.x, a.position.y, a.position.z, b.position.z]
         for (let x = x1; x <= x2; x++) {
@@ -123,12 +116,12 @@ class DaCanvas extends DaObject {
             if (x2 != x1) {
                 factor = (x - x1) / (x2 - x1)
             }
-            let color = a.color.interpolate(b.color, factor)
-            let z = z1 + (z2 - z1) * factor
-            this.drawPoint(DaVector.new(x, y, z), color)
+            let v = a.interpolate(b, factor)
+            let color = texture.colorFromUV(v.u, v.v)
+            this.drawPoint(v.position, color)
         }
     }
-    drawTriangle(v1, v2, v3) {
+    drawTriangle(v1, v2, v3, texture) {
         let [a, b, c] = [v1, v2, v3].sort((va, vb) => va.position.y - vb.position.y)
         let middle_factor = 0
         if (c.position.y - a.position.y != 0) {
@@ -144,7 +137,7 @@ class DaCanvas extends DaObject {
             }
             let va = a.interpolate(middle, factor)
             let vb = a.interpolate(b, factor)
-            this.drawScanline(va, vb)
+            this.drawScanline(va, vb, texture)
         }
         start_y = b.position.y
         end_y = c.position.y
@@ -155,7 +148,7 @@ class DaCanvas extends DaObject {
             }
             let va = middle.interpolate(c, factor)
             let vb = b.interpolate(c, factor)
-            this.drawScanline(va, vb)
+            this.drawScanline(va, vb, texture)
         }
     }
     project(coordVector, transformMatrix) {
@@ -167,7 +160,7 @@ class DaCanvas extends DaObject {
         let z = point.z
 
         let v = DaVector.new(x, y, z)
-        return DaVertex.new(v, coordVector.color)
+        return DaVertex.new(v, coordVector.u, coordVector.v, coordVector.color)
     }
     drawMesh(mesh) {
         let self = this
@@ -175,7 +168,7 @@ class DaCanvas extends DaObject {
         let {w, h} = this
         let {position, target, up} = self.camera
         const view = Matrix.lookAtLH(position, target, up)
-        const projection = Matrix.perspectiveFovLH(0.8, w / h, 0.1, 1)
+        const projection = Matrix.perspectiveFovLH(0.5, w / h, 0.1, 1)
 
         const rotation = Matrix.rotation(mesh.rotation)
         const translation = Matrix.translation(mesh.position)
@@ -186,24 +179,16 @@ class DaCanvas extends DaObject {
         for (let t of mesh.indices) {
             let [a, b, c] = t.map(i => mesh.vertices[i])
             let [v1, v2, v3] = [a, b, c].map(v => self.project(v, transform))
-            self.drawTriangle(v1, v2, v3)
-            self.drawLine(v1.position, v2.position)
-            self.drawLine(v1.position, v3.position)
-            self.drawLine(v2.position, v3.position)
+            self.drawTriangle(v1, v2, v3, mesh.texture)
         }
     }
     drawImage(daImageString){
-        let s = daImageString.split('\n')
-        let width = parseInt(s[2])
-        let height = parseInt(s[3])
+        let image = DaImage.fromString(daImageString)
+        let {width, height} = image
         let begin = 4 // 第5行开始是像素值
         for (let i = 0; i < height; i++) {
-            let line = s[begin+i] || ''
-            let linePixels = line.split(' ')
             for (let j = 0; j < width; j++) {
-                let pixel = parseInt(linePixels[j]) || 0
-                let [r, g, b, a] = rgbaFromPixel(pixel)
-                let color = DaColor.new(r, g, b, a)
+                let color = image.colorFromXY(j, i)
                 let point = DaVector.new(j, i, 0)
                 this.drawPoint(point, color)
             }
