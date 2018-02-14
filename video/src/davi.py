@@ -2,11 +2,15 @@ import os
 import os.path as path
 import sys
 
+from src.pred.decode import decode2
 import src.pred.encode as pred_encoder
 import src.pred.decode as pred_decoder
 import src.video.video as video_coder
 from glob import glob
-
+from src.video.video import Davi
+from .utils import *
+from PIL import Image
+import io
 
 class DotDict(dict):
     def __getattr__(self, key):
@@ -33,6 +37,20 @@ def encoding_paths(intra_path):
     return DotDict(paths)
 
 
+def decoding_paths(davi_path, images_dir):
+    base = path.abspath(path.join(davi_path, '../..'))
+    vblock = 'tmp/vblock'
+    diff = 'tmp/diff'
+    video = path.dirname(davi_path)
+    paths = {
+        'images': images_dir,
+        'vblock': path.join(base, vblock),
+        'diff': path.join(base, diff),
+        'video': video,
+    }
+    return DotDict(paths)
+
+
 def encode(intra_path, davi_name):
     paths = encoding_paths(intra_path)
     filenames = glob(path.join(paths.images, '*.png'))
@@ -49,6 +67,23 @@ def encode(intra_path, davi_name):
 
 
 def decode(davi_path, images_dir):
+    davi = Davi.from_bytes(bytes_from_path(davi_path))
+    # intra_frame
+    intra_bytes = davi.diff[0]['data']
+    intra_path = path.join(images_dir, '0.png')
+    write_bytes(intra_bytes, intra_path)
+    # pred_frame
+    i = 1
+    prev_bytes = intra_bytes
+    while i < davi.frames:
+        diff_bytes = davi.diff[i]['data']
+        vblock_json = davi.vblock[i-1]
+        pred_bytes = decode2(prev_bytes, vblock_json, diff_bytes)
+        pred_path = path.join(images_dir, '{}.png'.format(i))
+        write_bytes(pred_bytes, pred_path)
+        prev_bytes = pred_bytes
+        i += 1
+    # paths = decoding_paths(davi_path, images_dir)
     pass
 
 

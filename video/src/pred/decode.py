@@ -1,5 +1,5 @@
 import os.path as path
-
+import io
 from PIL import Image
 
 from src.utils import *
@@ -46,15 +46,16 @@ def curr_img_gen(vblock, diff_img, prev_img):
     return curr_img
 
 
-def decode2(prev_path, paths):
-    curr_name = next_name(prev_path)
-    vblock_path = path.join(paths.vblock, curr_name + '.vblock')
-    diff_path = path.join(paths.diff, curr_name + '.diff.png')
-    out_path = path.join(paths.out, curr_name + '.png')
-    vblock, diff_img, prev_img = json_from_path(vblock_path), grayimage(diff_path), grayimage(prev_path)
+def decode2(prev_bytes, vblock_json, diff_bytes):
+    vblock = vblock_json
+    diff_img = Image.open(io.BytesIO(diff_bytes)).convert('L')
+    prev_img = Image.open(io.BytesIO(prev_bytes)).convert('L')
+    #
     curr_img = curr_img_gen(vblock, diff_img, prev_img)
-    curr_img.save(out_path)
-    pass
+    img_bytes_io = io.BytesIO()
+    curr_img.save(img_bytes_io, format='PNG')
+    img_bytes = img_bytes_io.getvalue()
+    return img_bytes
 
 def decode(prev_path, vblock_path, diff_path, out_path):
     vblock, diff_img, prev_img = json_from_path(vblock_path), grayimage(diff_path), grayimage(prev_path)

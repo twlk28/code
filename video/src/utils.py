@@ -5,6 +5,10 @@ def write_json(jsondata, savepath):
         json1 = json.dumps(jsondata)
         f.write(json1)
 
+def write_bytes(b, savepath):
+    with open(savepath, 'wb') as f:
+        f.write(b)
+
 def json_from_path(p):
     data = None
     with open(p, encoding='utf-8') as f:
