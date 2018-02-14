@@ -2,7 +2,7 @@ import os.path as path
 
 from PIL import Image
 
-from .utils import *
+from src.utils import *
 
 
 def grayimage(path):
