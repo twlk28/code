@@ -1,11 +1,4 @@
-import os.path as path
-import sys
-from glob import glob
 from struct import pack, unpack
-
-import PIL.Image as Image
-
-from src.utils import *
 
 
 class Davi(object):
@@ -125,66 +118,3 @@ class Davi(object):
         with open(savepath, 'wb') as f:
             f.write(data)
         pass
-
-
-class DotDict(dict):
-    def __getattr__(self, key):
-        return self[key]
-
-    def __setattr__(self, key, val):
-        if key in self.__dict__:
-            self.__dict__[key] = val
-        else:
-            self[key] = val
-
-
-def encoding_paths(intra_path):
-    base = path.abspath(path.join(intra_path, '../..'))
-    vblock = 'tmp/vblock'
-    diff = 'tmp/diff'
-    video = 'video/'
-    paths = {
-        'images': path.dirname(intra_path),
-        'vblock': path.join(base, vblock),
-        'diff': path.join(base, diff),
-        'video': path.join(base, video),
-    }
-    return DotDict(paths)
-
-
-def encode(intra_path, vblock_dir, diff_dir, davi_path):
-    davi = Davi()
-    paths = encoding_paths(intra_path)
-    numbers_of_images = len(glob(path.join(paths.images, '*.png')))
-    width, height = Image.open(intra_path).size
-    davi.write_meta(numbers_of_images, width, height)
-    # write diff
-    davi.write_diff(bytes_from_path(intra_path))
-    for p in glob(path.join(paths.diff, '*.diff.png')):
-        davi.write_diff(bytes_from_path(p))
-    # write vblock
-    for p in glob(path.join(paths.vblock, '*.vblock')):
-        davi.write_vblock(json_from_path(p))
-    davi.save(davi_path)
-    pass
-
-
-def decode(davi_path, images_dir):
-    d = bytes_from_path(davi_path)
-    v = Davi.from_bytes(d)
-
-    pass
-
-
-def cli():
-    args = sys.argv[1:]
-    if args[0] == 'encode':
-        _, intra_path, vblock_dir, diff_dir, davi_path = args
-        encode(intra_path, vblock_dir, diff_dir, davi_path)
-    elif args[0] == 'decode':
-        pass
-    pass
-
-
-if __name__ == '__main__':
-    cli()

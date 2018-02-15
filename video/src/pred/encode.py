@@ -1,5 +1,3 @@
-import os.path as path
-
 from PIL import Image
 
 from src.utils import *
@@ -105,30 +103,12 @@ def diff_image_gen(vblock, prev_img, next_img):
             diff_pixels[x, y] = interpolate_pixel(p2, p1)
     return diff_img
 
-def encode(prev_path, curr_path, vblock_dir, diff_dir):
-    curr_name = path.basename(curr_path).split('.')[0]
-    vblock_path = path.join(vblock_dir, curr_name + '.vblock')
-    diff_path = path.join(diff_dir, curr_name + '.diff.png')
-    curr_img = grayimage(curr_path)
-    prev_img = grayimage(prev_path)
-    #
-    vblock = vblock_gen(prev_img, curr_img)
-    write_json(vblock, vblock_path)
-    #
-    diff = diff_image_gen(vblock, prev_img, curr_img)
-    diff.save(diff_path)
-    pass
 
-def encode2(prev_path, curr_path, paths):
-    curr_name = path.basename(curr_path).split('.')[0]
-    vblock_path = path.join(paths.vblock, curr_name + '.vblock')
-    diff_path = path.join(paths.diff, curr_name + '.diff.png')
-    curr_img = grayimage(curr_path)
-    prev_img = grayimage(prev_path)
-    #
+def encode(prev_bytes, curr_bytes):
+    prev_img = Image.open(io.BytesIO(prev_bytes)).convert('L')
+    curr_img = Image.open(io.BytesIO(curr_bytes)).convert('L')
     vblock = vblock_gen(prev_img, curr_img)
-    write_json(vblock, vblock_path)
-    #
     diff = diff_image_gen(vblock, prev_img, curr_img)
-    diff.save(diff_path)
+    diff_bytes = bytes_from_image(diff)
+    return vblock, diff_bytes
     pass

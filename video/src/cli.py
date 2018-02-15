@@ -3,17 +3,10 @@ import os.path as path
 import sys
 from glob import glob
 
-from PIL import Image
-
-from src.pred.decode import decode as pred_decode
-from src.pred.encode import encode as pred_encode
-from src.video.video import Davi
-from .utils import *
-
-
-def setup_paths(p):
-    if not os.path.exists(p):
-        os.makedirs(p)
+from src.pred.cli import decode as pred_decode
+from src.pred.cli import encode as pred_encode
+from src.video.cli import decode as video_decode
+from src.video.cli import encode as video_encode
 
 
 class DotDict(dict):
@@ -47,12 +40,22 @@ def decoding_paths(davi_path, images_dir):
     diff = 'tmp/diff'
     video = path.dirname(davi_path)
     paths = {
+        'intra': path.join(images_dir, 'big_buck_bunny_07501.png'),
         'images': images_dir,
         'vblock': path.join(base, vblock),
         'diff': path.join(base, diff),
         'video': video,
     }
     return DotDict(paths)
+
+
+def setup_paths(paths):
+    for k, v in paths.items():
+        if k == 'intra':
+            continue
+        elif not os.path.exists(v):
+            os.makedirs(v)
+    pass
 
 
 def next_path(prev_path):
@@ -64,42 +67,41 @@ def next_path(prev_path):
 
 
 def encode(intra_path, davi_path):
-    davi = Davi()
-    numbers_of_images = len(glob(path.join(path.dirname(intra_path), '*.png')))
-    width, height = Image.open(intra_path).size
-    davi.write_meta(numbers_of_images, width, height)
-    intra_bytes = bytes_from_path(intra_path)
-    davi.write_diff(intra_bytes)
-    prev_path = intra_path
-    prev_bytes = intra_bytes
-    i = 1
-    while i < numbers_of_images:
-        curr_path = next_path(prev_path)
-        curr_bytes = bytes_from_path(curr_path)
-        vblock, diff_bytes = pred_encode(prev_bytes, curr_bytes)
-        davi.write_diff(diff_bytes)
-        davi.write_vblock(vblock)
-        prev_path = curr_path
-        prev_bytes = curr_bytes
-        i += 1
-    davi.save(davi_path)
+    paths = encoding_paths(intra_path)
+    setup_paths(paths)
+    filenames = glob(path.join(paths.images, '*.png'))
+    length = len(filenames)
+    for i, _ in enumerate(filenames):
+        if i + 1 < length:
+            prev_path = filenames[i]
+            curr_path = filenames[i + 1]
+            pred_encode(prev_path, curr_path, paths.vblock, paths.diff)
+    video_encode(intra_path, paths.vblock, paths.diff, davi_path)
+    pass
+
+
+def next_name(i):
+    b = 7501 + i
+    c = str(b).zfill(5)
+    d = 'big_buck_bunny_{}'.format(c)
+    return d
+    pass
 
 
 def decode(davi_path, images_dir):
-    setup_paths(images_dir)
-    davi = Davi.from_bytes(bytes_from_path(davi_path))
-    intra_bytes = davi.diff[0]['data']
-    intra_path = path.join(images_dir, '0.png')
-    write_bytes(intra_bytes, intra_path)
+    paths = decoding_paths(davi_path, images_dir)
+    setup_paths(paths)
+    video_decode(davi_path, images_dir)
+    prev_path = paths.intra
+    numbers_of_vblock = len(glob(path.join(paths.vblock, '*.vblock')))
     i = 1
-    prev_bytes = intra_bytes
-    while i < davi.frames:
-        diff_bytes = davi.diff[i]['data']
-        vblock_json = davi.vblock[i - 1]
-        pred_bytes = pred_decode(prev_bytes, vblock_json, diff_bytes)
-        pred_path = path.join(images_dir, '{}.png'.format(i))
-        write_bytes(pred_bytes, pred_path)
-        prev_bytes = pred_bytes
+    while i <= numbers_of_vblock:
+        name = next_name(i)
+        vblock_path = path.join(paths.vblock, name + '.vblock')
+        diff_path = path.join(paths.diff, name + '.diff.png')
+        pred_path = path.join(paths.images, name + '.png')
+        pred_decode(prev_path, vblock_path, diff_path, pred_path)
+        prev_path = pred_path
         i += 1
     pass
 
