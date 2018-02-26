@@ -1,0 +1,16 @@
+table.table {
+    width: 200px;
+}
+
+#id-tbody > tr > td {
+    height: 50px;
+    cursor: pointer;
+}
+
+td.select {
+    background-color: black;
+}
+
+.control {
+    display: inline-block;
+}
